@@ -4,7 +4,6 @@ import torchvision.transforms as T
 import os
 import cv2
 import numpy as np
-
 from PIL import Image
 import torchvision as torchvision
 import io
@@ -17,6 +16,7 @@ def is_image_file(file_path):
         return True
     except:
         return False
+
 
 def vid(path):
     # здесь должен быть код для обработки изображения
@@ -50,11 +50,18 @@ def vid(path):
         td_mean = np.mean([i[0][2] for i in preds])
         print(torch.tensor([fs_mean, sc_mean, td_mean]))
         result = torch.argmax(torch.tensor([fs_mean, sc_mean, td_mean])).item()
-    elif len(preds)== 1:
+    elif len(preds) == 1:
         result = torch.argmax(preds[0], dim=1).item()
     else:
         result = -1
     return swans[result]
+
+
+def get_loader_gif():
+    # загружаем гифку loader из файла и возвращаем байты
+    with open('Sourse/loader.gif', 'rb') as f:
+        return io.BytesIO(f.read()).getvalue()
+
 
 sg.theme('DarkAmber')
 file_list=[]
@@ -68,15 +75,15 @@ layout = [
     [sg.Listbox(values=[], size=(50, 10), key='-FILE LIST-', font=('Helvetica', 12), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED)],
     [sg.Button('Выбрать все', size=(10, 1), font=('Helvetica', 14), key='-SELECT ALL-'), sg.Button('Выполнить', size=(10, 1), font=('Helvetica', 14)), sg.Button('Очистить', size=(10, 1), font=('Helvetica', 14))],
     [sg.Multiline(key='-text-', font=('Helvetica', 14), size=(50, 10), autoscroll=True)],
-    [sg.Image(key='-IMAGE-')],
+    [sg.Image(data=get_loader_gif(), key='-LOADER-')] # добавляем элемент sg.Image для отображения гифки loader
 ]
 
-window = sg.Window('Загрузка изображений', layout, size=(800, 800), resizable=True)
+window = sg.Window('Загрузка изображений', layout, size=(800, 700), resizable=True)
 
 while True:
-    event, values = window.read()
+    event,values = window.read()
 
-    if event in (sg.WINDOW_CLOSED, 'Exit'):
+    if event in (sg.WINDOW_CLOSED,'Exit'):
         break
 
     if event == '-FOLDER-':
@@ -86,7 +93,7 @@ while True:
         window['-FILE LIST-'].update(values=image_list)
 
     if event == '-FILE-':
-        file_path = values['-FILE-']
+        file_path =values['-FILE-']
         if is_image_file(file_path):
             if file_path not in file_list:
                 file_list.append(file_path)
@@ -99,7 +106,6 @@ while True:
         window['-text-'].update('')
         window['-FOLDER-'].update('')
         window['-FILE-'].update('')
-        window['-IMAGE-'].update('')
         file_list = []
         folder_path = ''
 
@@ -109,20 +115,13 @@ while True:
     if event == 'Выполнить':
         selected_files = values['-FILE LIST-']
         if selected_files:
-            window['-IMAGE-'].update(filename='Sourse/loader.gif')
+            window['-LOADER-'].update(visible=True)  # показываем гифку loader перед обработкой изображений
             for file in selected_files:
                 file_path = os.path.join(values['-FOLDER-'], file)
                 result = vid(file_path)
                 print(file_path)
                 window.write_event_value('-UPDATE TEXT-', f"{file}: {result}\n")
-            window['-IMAGE-'].update(filename='')
-        else:
-            sg.popup('Ошибка', 'Необходимо выбрать хотя бы один файл для обработки', font=('Helvetica', 14))
-
-    if event == '-UPDATE TEXT-':
-        window['-text-'].print(values[event])
-
-window.close()
+            window['-LOADER-'].update(visible=False)  # скрываем гифкуloader после завершения обработки изображений
 '''
 import PySimpleGUI as sg
 import torch
